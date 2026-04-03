@@ -11,6 +11,8 @@ DEV_VERSION := dev-${COMMIT_HASH}
 USERID := $(shell id -u $$USER)
 GROUPID:= $(shell id -g $$USER)
 
+ARCH ?= amd64
+
 .PHONY: build docker release
 
 build:
@@ -81,6 +83,29 @@ docker-hub:
 	docker build --pull -t moov/ach:$(VERSION) -f Dockerfile .
 	docker tag moov/ach:$(VERSION) moov/ach:latest
 
+.PHONY: docker-build-arch
+docker-build-arch:
+	docker build --platform linux/$(ARCH) \
+		-t moov/ach:$(VERSION)-$(ARCH) \
+		-t moov/ach:latest-$(ARCH) \
+		-f Dockerfile .
+
+.PHONY: docker-push-arch
+docker-push-arch:
+	docker push moov/ach:$(VERSION)-$(ARCH)
+	docker push moov/ach:latest-$(ARCH)
+
+.PHONY: docker-manifest
+docker-manifest:
+	docker manifest create moov/ach:$(VERSION) \
+		moov/ach:$(VERSION)-amd64 \
+		moov/ach:$(VERSION)-arm64
+	docker manifest push moov/ach:$(VERSION)
+	docker manifest create moov/ach:latest \
+		moov/ach:latest-amd64 \
+		moov/ach:latest-arm64
+	docker manifest push moov/ach:latest
+
 .PHONY: dev-docker
 dev-docker:
 	docker build --pull --build-arg VERSION=${DEV_VERSION} -t moov/ach:${DEV_VERSION} -f Dockerfile .
@@ -113,3 +138,4 @@ cover-test:
 	go test -coverprofile=cover.out ./...
 cover-web:
 	go tool cover -html=cover.out
+

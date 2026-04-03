@@ -73,8 +73,8 @@ jobs:
     - name: Distribute
       run: make dist-webui
 
-  docker:
-    name: Docker
+  docker-amd64:
+    name: Docker AMD64
     needs: [testing, release]
     runs-on: ubuntu-latest
     steps:
@@ -87,13 +87,55 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v6
 
-    - name: Docker
-      run: make docker
-
-    - name: Docker Push
-      run: |+
-          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-          make release-push
+    - name: Login to DockerHub
+      run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       env:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and push amd64 image
+      run: |
+        make docker-build-arch ARCH=amd64
+        make docker-push-arch ARCH=amd64
+
+  docker-arm64:
+    name: Docker ARM64
+    needs: [testing, release]
+    runs-on: ubuntu-24.04-arm
+    steps:
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v6
+      with:
+        go-version: stable
+      id: go
+
+    - name: Check out code
+      uses: actions/checkout@v6
+
+    - name: Login to DockerHub
+      run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and push arm64 image
+      run: |
+        make docker-build-arch ARCH=arm64
+        make docker-push-arch ARCH=arm64
+
+  docker-manifest:
+    name: Docker Manifest
+    needs: [docker-amd64, docker-arm64]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v6
+
+    - name: Login to DockerHub
+      run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Create and push manifests
+      run: make docker-manifest
