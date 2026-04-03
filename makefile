@@ -83,8 +83,8 @@ docker-hub:
 	docker build --pull -t moov/ach:$(VERSION) -f Dockerfile .
 	docker tag moov/ach:$(VERSION) moov/ach:latest
 
-.PHONY: docker-hub-arch
-docker-hub-arch:
+.PHONY: docker-build-arch
+docker-build-arch:
 	docker build --platform linux/$(ARCH) \
 		-t moov/ach:$(VERSION)-$(ARCH) \
 		-t moov/ach:latest-$(ARCH) \
